@@ -4287,7 +4287,8 @@ clear_symtab_users (void)
 
   clear_value_history ();
   clear_displays ();
-  clear_internalvars ();
+  // no need to clear the internal vars... damn apple forks - fG! 10/08/2009
+  //clear_internalvars ();
   /* APPLE LOCAL breakpoints (remove reset) */
   set_default_breakpoint (0, 0, 0, 0);
   clear_pc_function_cache ();
