@@ -90,7 +90,8 @@ endif
 endif
 endif
 
-GDB_VERSION_STRING = $(GDB_VERSION) (Apple version gdb-$(GDB_RC_VERSION))
+PUTAS_PATCHES = 0.4
+GDB_VERSION_STRING = $(GDB_VERSION) (Apple version gdb-$(GDB_RC_VERSION) + reverse.put.as patches v$(PUTAS_PATCHES))
 BINUTILS_VERSION_STRING = "$(BINUTILS_VERSION) (Apple version binutils-$(BINUTILS_RC_VERSION))"
 
 GDB_BINARIES = gdb
