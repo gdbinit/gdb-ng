@@ -892,7 +892,7 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
   if (format == 'T')
     size = 'w';
 
-  if (format == 'i')
+  if (format == 'i' || format == 'l')
     val_type = examine_i_type;
   else if (size == 'b')
     val_type = examine_b_type;
@@ -908,51 +908,67 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
     maxelts = 4;
   if (size == 'g')
     maxelts = 2;
-  if (format == 's' || format == 'i')
+  if (format == 's' || format == 'i' || format == 'l')
     maxelts = 1;
 
   /* Print as many objects as specified in COUNT, at most maxelts per line,
      with the address of the next one at the start of each line.  */
-
-  while (count > 0)
+    // the normal gdb formats
+    if (format != 'l')
     {
-      QUIT;
-      print_address (next_address, gdb_stdout);
-      printf_filtered (":");
-      for (i = maxelts;
-	   i > 0 && count > 0;
-	   i--, count--)
-	{
-	  printf_filtered (" ");
-	  /* Note that print_formatted sets next_address for the next
-	     object.  */
-	  last_examine_address = next_address;
-
-	  if (last_examine_value)
-	    value_free (last_examine_value);
-
-	  /* The value to be displayed is not fetched greedily.
-	     Instead, to avoid the posibility of a fetched value not
-	     being used, its retreval is delayed until the print code
-	     uses it.  When examining an instruction stream, the
-	     disassembler will perform its own memory fetch using just
-	     the address stored in LAST_EXAMINE_VALUE.  FIXME: Should
-	     the disassembler be modified so that LAST_EXAMINE_VALUE
-	     is left with the byte sequence from the last complete
-	     instruction fetched from memory? */
-	  last_examine_value = value_at_lazy (val_type, next_address);
-
-	  if (last_examine_value)
-	    release_value (last_examine_value);
-
-	  print_formatted (last_examine_value, format, size, gdb_stdout);
-		// uncomment if you want to have the symbolic name printed in every line
-		// fG! 12/08/2009
-		//print_address_symbolic (next_address, gdb_stdout, asm_demangle, " \t\t\t");
-	}
-      printf_filtered ("\n");
-      gdb_flush (gdb_stdout);
+        while (count > 0)
+        {
+            QUIT;
+            print_address (next_address, gdb_stdout);
+            printf_filtered (":");
+            for (i = maxelts; i > 0 && count > 0; i--, count--)
+            {
+                printf_filtered (" ");
+                /* Note that print_formatted sets next_address for the next
+                 object.  */
+                last_examine_address = next_address;
+                
+                if (last_examine_value)
+                    value_free (last_examine_value);
+                
+                /* The value to be displayed is not fetched greedily.
+                 Instead, to avoid the posibility of a fetched value not
+                 being used, its retreval is delayed until the print code
+                 uses it.  When examining an instruction stream, the
+                 disassembler will perform its own memory fetch using just
+                 the address stored in LAST_EXAMINE_VALUE.  FIXME: Should
+                 the disassembler be modified so that LAST_EXAMINE_VALUE
+                 is left with the byte sequence from the last complete
+                 instruction fetched from memory? */
+                last_examine_value = value_at_lazy (val_type, next_address);
+                
+                if (last_examine_value)
+                    release_value (last_examine_value);
+                
+                print_formatted (last_examine_value, format, size, gdb_stdout);
+                // uncomment if you want to have the symbolic name printed in every line
+                // fG! 12/08/2009
+                //print_address_symbolic (next_address, gdb_stdout, asm_demangle, " \t\t\t");
+            }
+            printf_filtered ("\n");
+            gdb_flush (gdb_stdout);
+        }
     }
+    // our new format
+    else if (format == 'l')
+    {
+        last_examine_address = next_address;
+        
+        if (last_examine_value)
+            value_free (last_examine_value);
+        
+        last_examine_value = value_at_lazy (val_type, next_address);
+        
+        if (last_examine_value)
+            release_value (last_examine_value);
+        print_formatted (last_examine_value, format, size, gdb_null);
+    }
+
 }
 
 static void
@@ -1511,6 +1527,11 @@ x_command (char *exp, int from_tty)
       else
 	set_internalvar (lookup_internalvar ("__"), last_examine_value);
     }
+  if (fmt.format == 'l')
+  {
+      // lookup_internalvar will create the variable if it does not exist (and initialize to void)
+     set_internalvar (lookup_internalvar ("insnsize"), next_address);  
+  }
 }
 
 
