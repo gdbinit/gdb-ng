@@ -827,7 +827,9 @@ void
 print_address (CORE_ADDR addr, struct ui_file *stream)
 {
   deprecated_print_address_numeric (addr, 1, stream);
-  print_address_symbolic (addr, stream, asm_demangle, " ");
+// uncomment if you want to have the default symbolic name printing after the address in every line
+// fG! 12/08/2009
+//  print_address_symbolic (addr, stream, asm_demangle, " ");
 }
 
 /* Print address ADDR symbolically on STREAM.  Parameter DEMANGLE
@@ -921,7 +923,7 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
 	   i > 0 && count > 0;
 	   i--, count--)
 	{
-	  printf_filtered ("\t");
+	  printf_filtered (" ");
 	  /* Note that print_formatted sets next_address for the next
 	     object.  */
 	  last_examine_address = next_address;
@@ -944,6 +946,9 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
 	    release_value (last_examine_value);
 
 	  print_formatted (last_examine_value, format, size, gdb_stdout);
+		// uncomment if you want to have the symbolic name printed in every line
+		// fG! 12/08/2009
+		//print_address_symbolic (next_address, gdb_stdout, asm_demangle, " \t\t\t");
 	}
       printf_filtered ("\n");
       gdb_flush (gdb_stdout);
