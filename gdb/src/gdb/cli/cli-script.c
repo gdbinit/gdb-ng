@@ -31,6 +31,7 @@
 #include "gdb_string.h"
 #include "exceptions.h"
 #include "top.h"
+#include "breakpoint.h"
 #include "event-top.h"  /* for async_request_quit */
 #include "cli/cli-cmds.h"
 #include "cli/cli-decode.h"
@@ -203,6 +204,23 @@ print_command_lines (struct ui_out *uiout, struct command_line *cmd,
 	      print_command_lines (uiout, list->body_list[1], depth + 1);
 	    }
 
+	  if (depth)
+	    ui_out_spaces (uiout, 2 * depth);
+	  ui_out_field_string (uiout, NULL, "end");
+	  ui_out_text (uiout, "\n");
+	  list = list->next;
+	  continue;
+	}
+
+      /* A commands command.  Print the breakpoint commands and continue.  */
+      if (list->control_type == commands_control)
+	{
+	  if (*(list->line))
+	    ui_out_field_fmt (uiout, NULL, "commands %s", list->line);
+	  else
+	    ui_out_field_string (uiout, NULL, "commands");
+	  ui_out_text (uiout, "\n");
+	  print_command_lines (uiout, *list->body_list, depth + 1);
 	  if (depth)
 	    ui_out_spaces (uiout, 2 * depth);
 	  ui_out_field_string (uiout, NULL, "end");
@@ -482,6 +500,17 @@ execute_control_command (struct command_line *cmd)
 	    current = current->next;
 	  }
 
+	break;
+      }
+    case commands_control:
+      {
+	/* Breakpoint commands list, record the commands in the breakpoint's
+	   command list and return.  */
+	new_line = insert_args (cmd->line);
+	if (!new_line)
+	  break;
+	make_cleanup (free_current_contents, &new_line);
+	ret = commands_from_control_command (new_line, cmd);
 	break;
       }
 
@@ -830,6 +859,14 @@ process_next_line (char *p, struct command_line **command)
         first_arg++;
       *command = build_command_line (if_control, first_arg);
     }
+  else if (p1 - p >= 8 && !strncmp (p, "commands", 8))
+    {
+      char *first_arg;
+      first_arg = p + 8;
+      while (first_arg < p1 && isspace (*first_arg))
+        first_arg++;
+      *command = build_command_line (commands_control, first_arg);
+    }
   else if (p1 - p == 10 && !strncmp (p, "loop_break", 10))
     {
       *command = (struct command_line *)
@@ -905,7 +942,8 @@ recurse_read_control_structure (char * (*read_next_line_func) (), struct command
       if (val == end_command)
 	{
 	  if (current_cmd->control_type == while_control
-	      || current_cmd->control_type == if_control)
+	      || current_cmd->control_type == if_control
+	      || current_cmd->control_type == commands_control)
 	    {
 	      /* Success reading an entire control structure.  */
 	      ret = simple_control;
@@ -955,7 +993,8 @@ recurse_read_control_structure (char * (*read_next_line_func) (), struct command
       /* If the latest line is another control structure, then recurse
          on it.  */
       if (next->control_type == while_control
-	  || next->control_type == if_control)
+	  || next->control_type == if_control
+	  || next->control_type == commands_control)
 	{
 	  control_level++;
 	  ret = recurse_read_control_structure (read_next_line_func, next);
@@ -1037,7 +1076,8 @@ read_command_lines_1 (char * (*read_next_line_func) ())
 	}
 
       if (next->control_type == while_control
-	  || next->control_type == if_control)
+	  || next->control_type == if_control
+  	  || next->control_type == commands_control)
 	{
 	  control_level++;
 	  ret = recurse_read_control_structure (read_next_line_func, next);
