@@ -2034,55 +2034,107 @@ bfd_mach_o_scan_read_segment (bfd *abfd,
   char *sname;
   const char *prefix = "LC_SEGMENT";
   unsigned int snamelen;
+  // bfd_mach_o_segment_command structure is missing the cmd and cmdsize fields...DUH! - fG!
+  unsigned int cmd = 0;
+  unsigned int cmdsize = 0;
+  // this will hold our calculated value of nsects (the real one!)
+  unsigned int realnsects = 0;
 
+// To calculate the real number of sections we can use this information:
+// cmdsize 
+// Common to all loadcommand structures. For this structure, set this field to 
+// sizeof(segment_command) plus the size of all the section data structures that follow 
+// (sizeof(segment_command + (sizeof(section) * segment->nsect))). 
+	
   if (wide)
-    {
+  {
       BFD_ASSERT (command->type == BFD_MACH_O_LC_SEGMENT_64);
 
-      bfd_seek (abfd, command->offset + 8, SEEK_SET);
-      if (bfd_bread ((PTR) buf, 64, abfd) != 64)
-	return -1;
+	  // read cmd and cmdsize - fG!
+	  bfd_seek(abfd, command->offset, SEEK_SET);
+	  if (bfd_bread((PTR) buf, 8, abfd) != 8)
+	  {
+			printf("\nERROR: 8 bytes bfd_read for cmd and cmdsize failed!\n");
+			return -1;
+	  }
+	  cmd = bfd_h_get_64(abfd, buf);
+   	  cmdsize = bfd_h_get_64(abfd, buf + 8);
+	  // calculate the real number of sections
+	  // segment_command_64 structure is 72 bytes
+	  realnsects = (cmdsize - sizeof(struct segment_command_64)) / sizeof(struct section_64);
+		
+      bfd_seek(abfd, command->offset + 8, SEEK_SET);
+      if (bfd_bread((PTR) buf, 64, abfd) != 64)
+	  {
+		  printf("\nERROR: 64 bytes bfd_read failed!\n");
+		  return -1;
+	  }
 
       memcpy (seg->segname, buf, 16);
 
-      seg->vmaddr = bfd_h_get_64 (abfd, buf + 16);
-      seg->vmsize = bfd_h_get_64 (abfd, buf + 24);
-      seg->fileoff = bfd_h_get_64 (abfd, buf + 32);
-      seg->filesize = bfd_h_get_64 (abfd, buf + 40);
-      seg->maxprot = bfd_h_get_32 (abfd, buf + 48);
-      seg->initprot = bfd_h_get_32 (abfd, buf + 52);
-      seg->nsects = bfd_h_get_32 (abfd, buf + 56);
-      seg->flags = bfd_h_get_32 (abfd, buf + 60);
-    }
+      seg->vmaddr = bfd_h_get_64(abfd, buf + 16);
+      seg->vmsize = bfd_h_get_64(abfd, buf + 24);
+      seg->fileoff = bfd_h_get_64(abfd, buf + 32);
+      seg->filesize = bfd_h_get_64(abfd, buf + 40);
+      seg->maxprot = bfd_h_get_32(abfd, buf + 48);
+      seg->initprot = bfd_h_get_32(abfd, buf + 52);
+      seg->nsects = bfd_h_get_32(abfd, buf + 56);
+      seg->flags = bfd_h_get_32(abfd, buf + 60);
+  }
   else
-    {
+  {
       BFD_ASSERT (command->type == BFD_MACH_O_LC_SEGMENT);
 
-      bfd_seek (abfd, command->offset + 8, SEEK_SET);
-      if (bfd_bread ((PTR) buf, 48, abfd) != 48)
-	return -1;
+	  // read cmd and cmdsize - fG!
+	  bfd_seek(abfd, command->offset, SEEK_SET);
+	  // can't read data, so error !
+	  if (bfd_bread((PTR) buf, 8, abfd) != 8)
+	  {
+			printf("\nERROR: can't read data to retrieve cmd and cmdsize\n");
+			return -1;
+	  }
+	  // retrieve cmd and cmdsize
+	  cmd = bfd_h_get_32(abfd, buf);
+	  cmdsize = bfd_h_get_32(abfd, buf + 4);
+	  // calculate the real number of sections
+	  // segment_command structure is 56 bytes
+	  realnsects = (cmdsize - sizeof(struct segment_command)) / sizeof(struct section);
 
-      memcpy (seg->segname, buf, 16);
+	  // and get back to normal gdb processing
+      bfd_seek(abfd, command->offset + 8, SEEK_SET);
+      if (bfd_bread((PTR) buf, 48, abfd) != 48)
+	  {
+		  printf("\nERROR: can't read data to retrieve the whole header\n");
+		  return -1;
+	  }
 
-      seg->vmaddr = bfd_h_get_32 (abfd, buf + 16);
-      seg->vmsize = bfd_h_get_32 (abfd, buf + 20);
-      seg->fileoff = bfd_h_get_32 (abfd, buf + 24);
-      seg->filesize = bfd_h_get_32 (abfd, buf +  28);
-      seg->maxprot = bfd_h_get_32 (abfd, buf + 32);
-      seg->initprot = bfd_h_get_32 (abfd, buf + 36);
-      seg->nsects = bfd_h_get_32 (abfd, buf + 40);
-      seg->flags = bfd_h_get_32 (abfd, buf + 44);
-    }
+      memcpy(seg->segname, buf, 16);
+
+      seg->vmaddr = bfd_h_get_32(abfd, buf + 16);
+      seg->vmsize = bfd_h_get_32(abfd, buf + 20);
+      seg->fileoff = bfd_h_get_32(abfd, buf + 24);
+      seg->filesize = bfd_h_get_32(abfd, buf +  28);
+      seg->maxprot = bfd_h_get_32(abfd, buf + 32);
+      seg->initprot = bfd_h_get_32(abfd, buf + 36);
+      seg->nsects = bfd_h_get_32(abfd, buf + 40);
+      seg->flags = bfd_h_get_32(abfd, buf + 44);
+  }
 
   snamelen = strlen (prefix) + 1 + strlen (seg->segname) + 1;
   sname = (char *) bfd_alloc (abfd, snamelen);
   if (sname == NULL)
+  {
+	printf("\nERROR: bfd_alloc for sname failed!\n");
     return -1;
+  }
   sprintf (sname, "%s.%s", prefix, seg->segname);
 
   bfdsec = bfd_make_section_anyway (abfd, sname);
   if (bfdsec == NULL)
+  {
+	printf("\nERROR: bfd_make_section_anyway failed!\n");
     return -1;
+  }
 
   bfdsec->vma = seg->vmaddr;
   bfdsec->lma = seg->vmaddr;
@@ -2095,14 +2147,48 @@ bfd_mach_o_scan_read_segment (bfd *abfd,
   seg->segment = bfdsec;
 
   if (seg->nsects != 0)
-    {
-      seg->sections =
-	((bfd_mach_o_section *)
-	 bfd_alloc (abfd, seg->nsects * sizeof (bfd_mach_o_section)));
-      if (seg->sections == NULL)
-	return -1;
-
-      for (i = 0; i < seg->nsects; i++)
+  {
+		// check if the reported number of sections is correct		
+		// filesize = Indicates the number of bytes occupied by this segment on disk. Each section has a size of 68 bytes (32bits) or 80 bytes (64 bits).
+		// if the size of the whole segment (filesize) is less than the size of all the sections reported by the header,
+		// then it's certain we have a problem, most probably the anti-debug trick
+		// the real number of sections can be calculated from the cmdsize.
+		// formula is: (sizeof(segment_command + (sizeof(section) * segment->nsect))) = cmdsize (at each segment header!) - retrieved from Mac OS X ABI Mach-O File Format Reference
+		// 64 bits
+		if (wide)
+		{
+			if ((unsigned long long)seg->filesize < (unsigned long long)seg->nsects*sizeof(struct section_64) || seg->nsects > realnsects)
+			{
+				printf("\n\n***WARNING***: Possible number of sections anti-debug trick detected at segment %s !\n", seg->segname);		  
+				printf("Number of sections reported from the header is %lli, the real number should be %lli\n", (unsigned long long)seg->nsects, (unsigned long long)realnsects);
+				// this would allow gdb to process the file but then dyld will fail so until Apple fixes the problem there's no interest doing it
+				// printf("Fixing to allow gdb to parse and work with this binary...\n");
+				// seg->nsects = realnsects;				
+			}
+		}
+		// 32 bits
+		else
+		{
+			if ((unsigned long long)seg->filesize < (unsigned long long)seg->nsects*sizeof(struct section) || seg->nsects > realnsects)
+			{
+				printf("\n\n***WARNING***: Possible number of sections anti-debug trick detected at segment %s !\n", seg->segname);
+				printf("Number of sections reported from the header is %lli, the real number should be %lli\n", (unsigned long long)seg->nsects, (unsigned long long)realnsects);
+				// this would allow gdb to process the file but then dyld will fail so until Apple fixes the problem there's no interest doing it
+				// printf("Fixing to allow gdb to parse and work with this binary...\n");
+				// seg->nsects = realnsects;
+			}			
+		}
+		
+		// back to gdb normal code		
+		seg->sections = ((bfd_mach_o_section *) bfd_alloc (abfd, seg->nsects * sizeof (bfd_mach_o_section)));
+		// The 0xFFFFFFFF value will fail here since it's trying to allocate an huge amount of memory
+		if (seg->sections == NULL)
+		{
+			printf("\nERROR: bfd_alloc for seg->sections failed! Most probably because nsects is too big!\n");
+			return -1;
+		}
+		
+	for (i = 0; i < seg->nsects; i++)
 	{
 	  bfd_vma segoff;
 	  if (wide)
@@ -2112,9 +2198,12 @@ bfd_mach_o_scan_read_segment (bfd *abfd,
 
 	  if (bfd_mach_o_scan_read_section
 	      (abfd, &seg->sections[i], segoff, wide) != 0)
+	  {
+		printf("\nERROR: bfd_mach_o_scan_read_section failed!\n");
 	    return -1;
+	  }
 	}
-    }
+  }
 
   return 0;
 }
@@ -2137,6 +2226,7 @@ bfd_mach_o_scan_read_command (bfd *abfd, bfd_mach_o_load_command *command)
   unsigned char buf[8];
 
   bfd_seek (abfd, command->offset, SEEK_SET);
+
   if (bfd_bread ((PTR) buf, 8, abfd) != 8)
     return -1;
 
