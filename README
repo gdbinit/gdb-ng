@@ -1,0 +1,20 @@
+ .d8888b.  8888888b.  888888b.          888b    888  .d8888b.  
+d88P  Y88b 888  "Y88b 888  "88b         8888b   888 d88P  Y88b 
+888    888 888    888 888  .88P         88888b  888 888    888 
+888        888    888 8888888K.         888Y88b 888 888        
+888  88888 888    888 888  "Y88b        888 Y88b888 888  88888 
+888    888 888    888 888    888 888888 888  Y88888 888    888 
+Y88b  d88P 888  .d88P 888   d88P        888   Y8888 Y88b  d88P 
+ "Y8888P88 8888888P"  8888888P"         888    Y888  "Y8888P88 
+                                                               
+This is a fork from Apple's gdb with fixes and patches for some issues and enhancements.
+
+Synced with gdb-1822 from Apple's Xcode 4.5.
+
+To compile it you will need darwinbuild. Follow this post:
+http://reverse.put.as/2009/01/14/how-to-compile-gdb-and-other-apple-open-source-packages-in-mac-os-x/
+
+If you have any suggestions or improvements feel free to contact me, send patches, etc.
+
+Enjoy,
+fG!
