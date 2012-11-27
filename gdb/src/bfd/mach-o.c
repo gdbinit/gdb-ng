@@ -24,6 +24,7 @@
 #include "libbfd.h"
 #include "libiberty.h"
 #include <ctype.h>
+#include <mach-o/loader.h>
 
 #ifndef BFD_IO_FUNCS
 #define BFD_IO_FUNCS 0
@@ -2057,12 +2058,12 @@ bfd_mach_o_scan_read_segment (bfd *abfd,
 			printf("\nERROR: 8 bytes bfd_read for cmd and cmdsize failed!\n");
 			return -1;
 	  }
-	  cmd = bfd_h_get_64(abfd, buf);
-   	  cmdsize = bfd_h_get_64(abfd, buf + 8);
+	  cmd = bfd_h_get_32(abfd, buf);
+   	  cmdsize = bfd_h_get_32(abfd, buf + 4);
 	  // calculate the real number of sections
 	  // segment_command_64 structure is 72 bytes
 	  realnsects = (cmdsize - sizeof(struct segment_command_64)) / sizeof(struct section_64);
-		
+
       bfd_seek(abfd, command->offset + 8, SEEK_SET);
       if (bfd_bread((PTR) buf, 64, abfd) != 64)
 	  {
@@ -2157,10 +2158,10 @@ bfd_mach_o_scan_read_segment (bfd *abfd,
 		// 64 bits
 		if (wide)
 		{
-			if ((unsigned long long)seg->filesize < (unsigned long long)seg->nsects*sizeof(struct section_64) || seg->nsects > realnsects)
+			if (seg->filesize != 0 && (seg->filesize < (unsigned long long)seg->nsects*sizeof(struct section_64) || seg->nsects > realnsects))
 			{
-				printf("\n\n***WARNING***: Possible number of sections anti-debug trick detected at segment %s !\n", seg->segname);		  
-				printf("Number of sections reported from the header is %lli, the real number should be %lli\n", (unsigned long long)seg->nsects, (unsigned long long)realnsects);
+				printf("\n***WARNING***: Possible number of sections anti-debug trick detected at segment %s !\n", seg->segname);		  
+				printf("Number of sections reported from the header is %lli, the real number should be %d\n", (unsigned long long)seg->nsects, realnsects);
 				// this would allow gdb to process the file but then dyld will fail so until Apple fixes the problem there's no interest doing it
 				// printf("Fixing to allow gdb to parse and work with this binary...\n");
 				// seg->nsects = realnsects;				
@@ -2169,10 +2170,10 @@ bfd_mach_o_scan_read_segment (bfd *abfd,
 		// 32 bits
 		else
 		{
-			if ((unsigned long long)seg->filesize < (unsigned long long)seg->nsects*sizeof(struct section) || seg->nsects > realnsects)
+			if (seg->filesize != 0 && (seg->filesize < (unsigned long long)seg->nsects*sizeof(struct section) || seg->nsects > realnsects))
 			{
 				printf("\n\n***WARNING***: Possible number of sections anti-debug trick detected at segment %s !\n", seg->segname);
-				printf("Number of sections reported from the header is %lli, the real number should be %lli\n", (unsigned long long)seg->nsects, (unsigned long long)realnsects);
+				printf("Number of sections reported from the header is %lli, the real number should be %d\n", (unsigned long long)seg->nsects, realnsects);
 				// this would allow gdb to process the file but then dyld will fail so until Apple fixes the problem there's no interest doing it
 				// printf("Fixing to allow gdb to parse and work with this binary...\n");
 				// seg->nsects = realnsects;
