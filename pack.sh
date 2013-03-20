@@ -1,6 +1,7 @@
 #!/bin/bash
-
-tar -cvf gdb-1822.tar gdb
-gzip -c gdb-1822.tar >gdb-1822.tar.gz
-rm -f gdb-1822.tar
+VERSION=1822
+ln -s gdb gdb-$VERSION
+tar -cvLf gdb-$VERSION.tar gdb-$VERSION
+gzip -c gdb-$VERSION.tar >gdb-$VERSION.tar.gz
+rm -f gdb-$VERSION.tar
 
