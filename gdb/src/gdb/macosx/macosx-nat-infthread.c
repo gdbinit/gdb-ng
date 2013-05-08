@@ -715,6 +715,9 @@ get_dispatch_queue_name (CORE_ADDR dispatch_qaddr)
 
   namebuf[0] = '\0';
 
+  if (dispatch_offsets->version > 3)
+    return NULL;
+
   if (dispatch_qaddr != 0 
       && dispatch_offsets != NULL
       && safe_read_memory_unsigned_integer (dispatch_qaddr, wordsize,

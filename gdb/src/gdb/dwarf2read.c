@@ -3319,6 +3319,8 @@ skip_one_die (char *info_ptr, struct abbrev_info *abbrev,
 	  /* We need to continue parsing from here, so just go back to
 	     the top.  */
 	  goto skip_attribute;
+	case DW_FORM_flag_present:
+	  break;
 
 	default:
 	  error (_("Dwarf Error: Cannot handle %s in DWARF reader [in module %s]"),
@@ -8712,6 +8714,9 @@ read_attribute_value (struct attribute *attr, unsigned form,
       info_ptr += bytes_read;
       info_ptr = read_attribute_value (attr, form, abfd, info_ptr, cu);
       break;
+    case DW_FORM_flag_present:
+      DW_UNSND (attr) = 1;
+      break;
     default:
       error (_("Dwarf Error: Cannot handle %s in DWARF reader [in module %s]"),
 	     dwarf_form_name (form),
@@ -11727,6 +11732,8 @@ dwarf_form_name (unsigned form)
       return "DW_FORM_ref_udata";
     case DW_FORM_indirect:
       return "DW_FORM_indirect";
+    case DW_FORM_flag_present:
+      return "DW_FORM_flag_present";
     case DW_FORM_APPLE_db_str:
       return "DW_FORM_APPLE_db_str";
     default:
@@ -12226,6 +12233,9 @@ dump_die (struct die_info *die)
 	  /* the reader will have reduced the indirect form to
 	     the "base form" so this form should not occur */
 	  fprintf_unfiltered (gdb_stderr, "unexpected attribute form: DW_FORM_indirect");
+	  break;
+	case DW_FORM_flag_present:
+	  fprintf_unfiltered (gdb_stderr, "flag: TRUE");
 	  break;
 	default:
 	  fprintf_unfiltered (gdb_stderr, "unsupported attribute form: %d.",
@@ -15202,6 +15212,9 @@ db_read_attribute_value (struct attribute *attr, unsigned form,
       *info_ptr += bytes_read;
       *info_ptr = db_read_attribute_value (attr, form, info_ptr);
       break; 
+    case DW_FORM_flag_present:
+      DW_UNSND (attr) = 1;
+      break;
     case DW_FORM_ref1:
     case DW_FORM_ref2:
     case DW_FORM_ref4:

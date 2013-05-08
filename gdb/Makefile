@@ -1,5 +1,5 @@
 GDB_VERSION = 6.3.50-20050815
-GDB_RC_VERSION = 1822
+GDB_RC_VERSION = 1824
 
 BINUTILS_VERSION = 2.13-20021117
 BINUTILS_RC_VERSION = 46
@@ -125,15 +125,22 @@ BINUTILS_HEADERS = $(BINUTILS_FRAMEWORK)/Headers
 INTL_FRAMEWORK = $(BINUTILS_BUILD_ROOT)/usr/lib/libintl.dylib
 INTL_HEADERS = $(BINUTILS_BUILD_ROOT)/usr/include
 
-TAR = gnutar
-CPP = cpp
-CC = clang
-CXX = c++
-LD = ld
-AR = ar
-RANLIB = ranlib
-NM = nm
-CC_FOR_BUILD = clang
+export SDKROOT_FOR_BUILD = $(shell xcodebuild -version -sdk macosx Path | head -1)
+
+export AR       = $(shell xcrun -find ar)
+export CC       = $(shell xcrun -find clang)
+export CPP      = $(shell xcrun -find cpp) -I$(SDKROOT_FOR_BUILD)/usr/include
+export CXX      = $(shell xcrun -find clang++)
+export LD       = $(shell xcrun -find ld)
+export LIBTOOL  = $(shell xcrun -find libtool)
+export MAKE     = $(shell xcrun -find make)
+export NM       = $(shell xcrun -find nm)
+export RANLIB   = $(shell xcrun -find ranlib)
+export TAR      = $(shell xcrun -find gnutar)
+
+export CC_FOR_BUILD      = $(shell xcrun -find clang)
+export CCFLAGS_FOR_BUILD = -I$(SDKROOT_FOR_BUILD)/usr/include
+export LDFLAGS_FOR_BUILD = -isysroot $(SDKROOT_FOR_BUILD)
 
 ifndef CDEBUGFLAGS
 CDEBUGFLAGS = -g -Os -funwind-tables -fasynchronous-unwind-tables -D_DARWIN_UNLIMITED_STREAMS -Wno-format-security -Wno-format-nonliteral 
@@ -371,13 +378,20 @@ cross:;
 			$(INSTALL) -c -d "$${curr_objroot}"; \
 			if [[ "$${host_arch}" == "arm" ]] ; then \
 				sdk_cc=`xcrun -sdk $(SDKROOT) -find clang`; \
+				sdk_cxx=`xcrun -sdk $(SDKROOT) -find clang++`; \
 				sdk_cflags=" -isysroot $(SDKROOT)"; \
+				sdk_cxxflags=" -isysroot $(SDKROOT)"; \
 			else \
 				sdk_cc="clang"; \
-				sdk_cflags=""; \
+				sdk_cxx="clang++"; \
+				sdk_cflags=" -isysroot $(SDKROOT_FOR_BUILD)"; \
+				sdk_cxxflags=" -isysroot $(SDKROOT_FOR_BUILD)"; \
 			fi; \
 			(cd "$${curr_objroot}"/ && \
-				$(CONFIGURE_ENV) CC="$${sdk_cc} -arch $${host_arch_full}$${sdk_cflags}" $(MACOSX_FLAGS) $(SRCTOP)/src/configure \
+				$(CONFIGURE_ENV) \
+					CC="$${sdk_cc} -arch $${host_arch_full}$${sdk_cflags}" \
+					CXX="$${sdk_cxx} -arch $${host_arch_full}$${sdk_cxxflags}" \
+					$(MACOSX_FLAGS) $(SRCTOP)/src/configure \
 					--host=$${host_arch_vendor_os} \
 					--target=$${target_arch_vendor_os} \
 					--build=$(BUILD_ARCH) \
@@ -425,13 +439,20 @@ cross-installhdrs:
 			$(INSTALL) -c -d "$${curr_objroot}"; \
 			if [[ "$${host_arch}" == "arm" ]] ; then \
 				sdk_cc=`xcrun -sdk $(SDKROOT) -find clang`; \
+				sdk_cxx=`xcrun -sdk $(SDKROOT) -find clang++`; \
 				sdk_cflags=" -isysroot $(SDKROOT)"; \
+				sdk_cxxflags=" -isysroot $(SDKROOT)"; \
 			else \
 				sdk_cc="clang"; \
-				sdk_cflags=""; \
+				sdk_cxx="clang++"; \
+				sdk_cflags=" -isysroot $(SDKROOT_FOR_BUILD)"; \
+				sdk_cxxflags=" -isysroot $(SDKROOT_FOR_BUILD)"; \
 			fi; \
 			(cd "$${curr_objroot}"/ && \
-				$(CONFIGURE_ENV) CC="$${sdk_cc} -arch $${host_arch_full}$${sdk_cflags}" $(MACOSX_FLAGS) $(SRCTOP)/src/configure \
+				$(CONFIGURE_ENV) \
+					CC="$${sdk_cc} -arch $${host_arch_full}$${sdk_cflags}" \
+					CXX="$${sdk_cxx} -arch $${host_arch_full}$${sdk_cxxflags}" \
+					$(MACOSX_FLAGS) $(SRCTOP)/src/configure \
 					--host=$${host_arch_vendor_os} \
 					--target=$${target_arch_vendor_os} \
 					--build=$(BUILD_ARCH) \
