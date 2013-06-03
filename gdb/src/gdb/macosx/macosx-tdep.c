@@ -3330,6 +3330,10 @@ exhaustive_search_for_kernel_in_mem (struct objfile *ofile, CORE_ADDR *addr, uui
   /* Second, when the appropriate boot-args are set, the load 
      address of the kernel is written at a fixed address in 
      the kernel's low globals page.  See what's there.  */
+  /*
+   * fG! - this code will generate an error most of the time in Mountain Lion, we could probably just get rid of it.
+   * the reason is kernel aslr slide is usually too big so this address isn't valid anymore.
+   */
   ULONGEST val = 0;
   if (!found_kernel
       && wordsize == 4
@@ -3452,6 +3456,40 @@ exhaustive_search_for_kernel_in_mem (struct objfile *ofile, CORE_ADDR *addr, uui
             {
               cur_addr += stride;
             }
+        }
+    }
+
+/*
+ * fG! - 03-06-2013
+ * Add bruteforcing search for 64 bits kernel
+ * I have no idea why Apple didn't implement this.
+ * We do not need to search the whole 64 bits space since we have base search address from the __TEXT segment.
+ * Starting there we can find it very quickly!
+ */
+  if (wordsize == 8 && !found_kernel)
+    {
+      printf_filtered ("Starting exhaustive search for kernel in memory, do 'set kaslr-memory-search 0' to disable this in the future.\n");
+      /* if valid file_address will contain the __TEXT address from disk image */
+      if (file_address != INVALID_ADDRESS)
+       {
+         cur_addr = file_address;
+         /* start searching the address space from kernel __TEXT address on disk till UINT64_MAX */
+         while (!found_kernel && cur_addr != 0 && cur_addr < stop_addr)
+          {
+            if (mach_kernel_starts_here_p (cur_addr , uuid, &in_memory_uuid, &in_memory_osabi))
+              {
+                found_kernel = 1;
+              }
+            else if (mach_kernel_starts_here_p (cur_addr + offset, uuid, &in_memory_uuid, &in_memory_osabi))
+              {
+                found_kernel = 1;
+                cur_addr += offset;
+              }
+            else
+              {
+                cur_addr += stride;
+              }
+           }
         }
     }
 
