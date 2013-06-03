@@ -9,10 +9,18 @@ Y88b  d88P 888  .d88P 888   d88P        888   Y8888 Y88b  d88P
                                                                
 This is a fork from Apple's gdb with fixes and patches for some issues and enhancements.
 
-Synced with gdb-1822 from Apple's Xcode 4.5.
+Always synced with latest gdb version from http://opensource.apple.com.
 
-To compile it you will need darwinbuild. Follow this post:
+Since the latest version, darwinbuild is not a requirement anymore.
+You can go to gdb folder and ./configure && make to build this without darwinbuild.
+Props to Apple for finally fixing this!
+
+In case you want to build using darwinbuild, follow these posts:
 http://reverse.put.as/2009/01/14/how-to-compile-gdb-and-other-apple-open-source-packages-in-mac-os-x/
+http://reverse.put.as/2013/03/20/how-to-compile-gdb-in-mountain-lion-updated/
+
+Even if you compile outside darwinbuild you should read the second post regarding code signing
+requirements for Mountain Lion.
 
 If you have any suggestions or improvements feel free to contact me, send patches, etc.
 
