@@ -117,123 +117,111 @@ fetch_inferior_registers (int regno)
 
   current_pid = ptid_get_pid (inferior_ptid);
   current_thread = ptid_get_tid (inferior_ptid);
-  
-/* ifdef the following code so that gdb doesn't send the new
-   GDB_x86_THREAD_STATE constant when built on an older x86 MacOS X 10.4
-   system that won't recognize it.  In Leopard this is unnecessary.  */
-   
-  if (TARGET_OSABI == GDB_OSABI_UNKNOWN)
-    {
-      /* Attaching to a process.  Let's figure out what kind it is. */
-      gdb_x86_thread_state_t gp_regs;
-      struct gdbarch_info info;
-      unsigned int gp_count = GDB_x86_THREAD_STATE_COUNT;
-      kern_return_t ret = thread_get_state
-        (current_thread, GDB_x86_THREAD_STATE, (thread_state_t) & gp_regs,
-         &gp_count);
-      if (ret != KERN_SUCCESS)
-	{
-	  printf_unfiltered ("Error calling thread_get_state for GP registers for thread 0x%x\n", (int) current_thread);
-	  MACH_CHECK_ERROR (ret);
-	}
 
-      gdbarch_info_init (&info);
-      gdbarch_info_fill (current_gdbarch, &info);
-      info.byte_order = gdbarch_byte_order (current_gdbarch);
-      if (gp_regs.tsh.flavor == GDB_x86_THREAD_STATE64)
-        {
-          info.osabi = GDB_OSABI_DARWIN64;
-          info.bfd_arch_info = bfd_lookup_arch (bfd_arch_i386, bfd_mach_x86_64);
-        }
-      else
-        {
-          info.osabi = GDB_OSABI_DARWIN;
-          info.bfd_arch_info = bfd_lookup_arch (bfd_arch_i386, 
-                                                           bfd_mach_i386_i386);
-        }
-      gdbarch_update_p (info);
+  /* ifdef the following code so that gdb doesn't send the new
+  GDB_x86_THREAD_STATE constant when built on an older x86 MacOS X 10.4
+  system that won't recognize it.  In Leopard this is unnecessary.  */
+  if (TARGET_OSABI == GDB_OSABI_UNKNOWN)
+  {
+    /* Attaching to a process.  Let's figure out what kind it is. */
+    gdb_x86_thread_state_t gp_regs;
+    struct gdbarch_info info;
+    unsigned int gp_count = GDB_x86_THREAD_STATE_COUNT;
+    kern_return_t ret = thread_get_state(current_thread, GDB_x86_THREAD_STATE, (thread_state_t) & gp_regs, &gp_count);
+    if (ret != KERN_SUCCESS)
+    {
+      printf_unfiltered ("Error calling thread_get_state for GP registers for thread 0x%x\n", (int) current_thread);
+      MACH_CHECK_ERROR (ret);
     }
+
+    gdbarch_info_init (&info);
+    gdbarch_info_fill (current_gdbarch, &info);
+    info.byte_order = gdbarch_byte_order (current_gdbarch);
+    if (gp_regs.tsh.flavor == GDB_x86_THREAD_STATE64)
+    {
+      info.osabi = GDB_OSABI_DARWIN64;
+      info.bfd_arch_info = bfd_lookup_arch (bfd_arch_i386, bfd_mach_x86_64);
+    }
+    else
+    {
+      info.osabi = GDB_OSABI_DARWIN;
+      info.bfd_arch_info = bfd_lookup_arch (bfd_arch_i386, bfd_mach_i386_i386);
+    }
+    gdbarch_update_p (info);
+  }
 
   if (TARGET_OSABI == GDB_OSABI_DARWIN64)
+  {
+    if ((regno == -1) || IS_GP_REGNUM_64 (regno))
     {
-      if ((regno == -1) || IS_GP_REGNUM_64 (regno))
-        {
-          gdb_x86_thread_state_t gp_regs;
-          unsigned int gp_count = GDB_x86_THREAD_STATE_COUNT;
-          kern_return_t ret = thread_get_state
-            (current_thread, GDB_x86_THREAD_STATE, (thread_state_t) & gp_regs,
-             &gp_count);
-	  if (ret != KERN_SUCCESS)
-	    {
-	      printf_unfiltered ("Error calling thread_get_state for GP registers for thread 0x%x\n", (int) current_thread);
-	      MACH_CHECK_ERROR (ret);
-	    }
-          x86_64_macosx_fetch_gp_registers (&gp_regs.uts.ts64);
-          fetched++;
-        }
-
-      if ((regno == -1) 
-          || IS_FP_REGNUM_64 (regno)
-          || IS_VP_REGNUM_64 (regno)
-          || regno == REGS_64_MXCSR)
-        {
-          gdb_x86_float_state_t fp_regs;
-          unsigned int fp_count = GDB_x86_FLOAT_STATE_COUNT;
-          kern_return_t ret = thread_get_state
-            (current_thread, GDB_x86_FLOAT_STATE, (thread_state_t) & fp_regs,
-             &fp_count);
-	  if (ret != KERN_SUCCESS)
-	    {
-	      printf_unfiltered ("Error calling thread_get_state for float registers for thread 0x%x\n", (int) current_thread);
-	      MACH_CHECK_ERROR (ret);
-	    }
-          x86_64_macosx_fetch_fp_registers (&fp_regs.ufs.fs64);
-          fetched++;
-        }
+      gdb_x86_thread_state_t gp_regs;
+      unsigned int gp_count = GDB_x86_THREAD_STATE_COUNT;
+      kern_return_t ret = thread_get_state(current_thread, GDB_x86_THREAD_STATE, (thread_state_t) & gp_regs, &gp_count);
+      if (ret != KERN_SUCCESS)
+      {
+        printf_unfiltered ("Error calling thread_get_state for GP registers for thread 0x%x\n", (int) current_thread);
+        MACH_CHECK_ERROR (ret);
+      }
+      x86_64_macosx_fetch_gp_registers (&gp_regs.uts.ts64);
+      fetched++;
     }
+
+    if ((regno == -1) 
+        || IS_FP_REGNUM_64 (regno)
+        || IS_VP_REGNUM_64 (regno)
+        || regno == REGS_64_MXCSR)
+    {
+      gdb_x86_float_state_t fp_regs;
+      unsigned int fp_count = GDB_x86_FLOAT_STATE_COUNT;
+      kern_return_t ret = thread_get_state(current_thread, GDB_x86_FLOAT_STATE, (thread_state_t) & fp_regs, &fp_count);
+      if (ret != KERN_SUCCESS)
+      {
+        printf_unfiltered ("Error calling thread_get_state for float registers for thread 0x%x\n", (int) current_thread);
+        MACH_CHECK_ERROR (ret);
+      }
+      x86_64_macosx_fetch_fp_registers (&fp_regs.ufs.fs64);
+      fetched++;
+    }
+  }
   else
+  {
+    if ((regno == -1) || IS_GP_REGNUM (regno))
     {
-      if ((regno == -1) || IS_GP_REGNUM (regno))
-        {
-          gdb_x86_thread_state_t gp_regs;
-          unsigned int gp_count = GDB_x86_THREAD_STATE_COUNT;
-          kern_return_t ret = thread_get_state
-            (current_thread, GDB_x86_THREAD_STATE, (thread_state_t) & gp_regs,
-             &gp_count);
-	  if (ret != KERN_SUCCESS)
-	    {
-	      printf_unfiltered ("Error calling thread_get_state for GP registers for thread 0x%x\n", (int) current_thread);
-	      MACH_CHECK_ERROR (ret);
-	    }
-          i386_macosx_fetch_gp_registers (&(gp_regs.uts.ts32));
-          fetched++;
-        }
-
-      if ((regno == -1) 
-          || IS_FP_REGNUM (regno)
-          || i386_sse_regnum_p (current_gdbarch, regno)
-          || i386_mxcsr_regnum_p (current_gdbarch, regno))
-        {
-          gdb_i386_float_state_t fp_regs;
-          unsigned int fp_count = GDB_i386_FLOAT_STATE_COUNT;
-          kern_return_t ret = thread_get_state
-            (current_thread, GDB_i386_FLOAT_STATE, (thread_state_t) & fp_regs,
-             &fp_count);
-	  if (ret != KERN_SUCCESS)
-	    {
-	      printf_unfiltered ("Error calling thread_get_state for float registers for thread 0x%x\n", (int) current_thread);
-	      MACH_CHECK_ERROR (ret);
-	    }
-          i386_macosx_fetch_fp_registers (&fp_regs);
-          fetched++;
-        }
+      gdb_x86_thread_state_t gp_regs;
+      unsigned int gp_count = GDB_x86_THREAD_STATE_COUNT;
+      kern_return_t ret = thread_get_state(current_thread, GDB_x86_THREAD_STATE, (thread_state_t) & gp_regs, &gp_count);
+      if (ret != KERN_SUCCESS)
+      {
+        printf_unfiltered ("Error calling thread_get_state for GP registers for thread 0x%x\n", (int) current_thread);
+        MACH_CHECK_ERROR (ret);
+      }
+      i386_macosx_fetch_gp_registers (&(gp_regs.uts.ts32));
+      fetched++;
     }
+
+    if ((regno == -1) 
+        || IS_FP_REGNUM (regno)
+        || i386_sse_regnum_p (current_gdbarch, regno)
+        || i386_mxcsr_regnum_p (current_gdbarch, regno))
+    {
+      gdb_i386_float_state_t fp_regs;
+      unsigned int fp_count = GDB_i386_FLOAT_STATE_COUNT;
+      kern_return_t ret = thread_get_state(current_thread, GDB_i386_FLOAT_STATE, (thread_state_t) & fp_regs, &fp_count);
+      if (ret != KERN_SUCCESS)
+      {
+        printf_unfiltered ("Error calling thread_get_state for float registers for thread 0x%x\n", (int) current_thread);
+        MACH_CHECK_ERROR (ret);
+      }
+      i386_macosx_fetch_fp_registers (&fp_regs);
+      fetched++;
+    }
+  }
 
   if (! fetched)
-    {
-      warning ("unknown register %d", regno);
-      regcache_raw_supply (current_regcache, regno, NULL);
-    }
+  {
+    warning ("unknown register %d", regno);
+    regcache_raw_supply (current_regcache, regno, NULL);
+  }
 }
 
 /* Store our register values back into the inferior.
