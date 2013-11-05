@@ -8830,7 +8830,7 @@ test "x$prefix" = xNONE && prefix=$ac_default_prefix
 # Let make expand exec_prefix.
 test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'
 
-DEFS=-DHAVE_CONFIG_H
+DEFS="-DHAVE_CONFIG_H -DHAVE_STDLIB_H -DHAVE_LIMITS_H -DHAVE_STRING_H -DHAVE_UNISTD_H -DHAVE_SYS_PARAM_H -DHAVE_SYS_STAT_H -DHAVE_FCNTL_H -DHAVE_SYS_WAIT_H"
 
 ac_libobjs=
 ac_ltlibobjs=
