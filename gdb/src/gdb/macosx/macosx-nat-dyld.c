@@ -484,6 +484,60 @@ target_read_minimal_segment_64 (CORE_ADDR addr, struct segment_command_64 *s)
   return error;
 }
 
+/* fG (05/11/2013) functions to read the full segment commands */
+/* these functions were added before by Apple but removed in newer versions */
+int 
+target_read_segment_command_32 (CORE_ADDR addr, struct segment_command *s)
+{
+  int error;
+  gdb_assert(addr != INVALID_ADDRESS);
+  bzero(s, sizeof(*s));
+  error = target_read_memory(addr, (gdb_byte *)s, sizeof(struct segment_command));
+  
+  if (error == 0)
+    {
+      EXTRACT_INT_MEMBER (struct segment_command, s, cmd);
+      EXTRACT_INT_MEMBER (struct segment_command, s, cmdsize);
+      EXTRACT_INT_MEMBER (struct segment_command, s, vmaddr);
+      EXTRACT_INT_MEMBER (struct segment_command, s, vmsize);
+      EXTRACT_INT_MEMBER (struct segment_command, s, fileoff);
+      EXTRACT_INT_MEMBER (struct segment_command, s, filesize);
+      EXTRACT_INT_MEMBER (struct segment_command, s, maxprot);
+      EXTRACT_INT_MEMBER (struct segment_command, s, initprot);
+      EXTRACT_INT_MEMBER (struct segment_command, s, nsects);
+      EXTRACT_INT_MEMBER (struct segment_command, s, flags);
+
+    }
+  return error;
+}
+
+/* fG (05/11/2013) functions to read the full segment commands */
+/* these functions were added before by Apple but removed in newer versions */
+int 
+target_read_segment_command_64 (CORE_ADDR addr, struct segment_command_64 *s)
+{
+  int error;
+  gdb_assert (addr != INVALID_ADDRESS);
+  bzero (s, sizeof(*s));
+  error = target_read_memory (addr, (gdb_byte *)s, sizeof(struct segment_command_64));
+  
+  if (error == 0)
+    {
+      EXTRACT_INT_MEMBER (struct segment_command_64, s, cmd);
+      EXTRACT_INT_MEMBER (struct segment_command_64, s, cmdsize);
+      /* We don't need to swap segname.  */
+      EXTRACT_INT_MEMBER (struct segment_command_64, s, vmaddr);
+      EXTRACT_INT_MEMBER (struct segment_command_64, s, vmsize);
+      EXTRACT_INT_MEMBER (struct segment_command_64, s, fileoff);
+      EXTRACT_INT_MEMBER (struct segment_command_64, s, filesize);
+      EXTRACT_INT_MEMBER (struct segment_command_64, s, maxprot);
+      EXTRACT_INT_MEMBER (struct segment_command_64, s, initprot);
+      EXTRACT_INT_MEMBER (struct segment_command_64, s, nsects);
+      EXTRACT_INT_MEMBER (struct segment_command_64, s, flags);
+    }
+  return error;
+}
+
 int
 target_get_mach_header_size (struct mach_header *header)
 {
@@ -2112,6 +2166,40 @@ dyld_info_process_raw (struct macosx_dyld_thread_status *s,
         }
     }
   
+  /* fG (05/11/2013) compute the image size by adding the __TEXT segment size
+     not perfect but good enough for our goal here 
+     __DATA should not be added because of dyld_cache and we are not executing code there */
+    /* position into the first load command */
+    curpos = header_addr + target_get_mach_header_size (&entry->mem_header); 
+    /* process commands to find the info we need */
+    for (uint32_t z = 0; z < entry->mem_header.ncmds; z++)
+    {
+        if (target_read_load_command(curpos, &cmd) != 0)
+        {
+          break;
+        }
+        if (cmd.cmd == LC_SEGMENT)
+        {
+            struct segment_command scmd = {0};
+            target_read_segment_command_32(curpos, &scmd);
+            if (strncmp(scmd.segname, "__TEXT", 16) == 0)
+            {
+                entry->image_size += scmd.vmsize;
+            }
+        }
+        else if (cmd.cmd == LC_SEGMENT_64)
+        {
+            struct segment_command_64 scmd = {0};
+            target_read_segment_command_64(curpos, &scmd);
+            if (strncmp(scmd.segname, "__TEXT", 16) == 0)
+            {
+                 entry->image_size += scmd.vmsize;
+            }
+        }
+        /* advance to next command */
+        curpos += cmd.cmdsize;
+    }
+
   /* realpath the image name -- we can get many different paths to the
      same file handed to us, so try to canonicalize them via realpath.  */
   

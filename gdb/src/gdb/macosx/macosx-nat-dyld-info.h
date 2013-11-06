@@ -127,6 +127,8 @@ struct dyld_objfile_entry
      or not.  */
 
   int allocated;
+  unsigned long long image_size; /* fG (05/11/2013) computed size of image from __TEXT segment */
+                                 /* computed in dyld_info_process_raw() */
 };
 
 

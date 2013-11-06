@@ -251,6 +251,7 @@ dyld_objfile_entry_clear (struct dyld_objfile_entry *e)
   e->reason = 0;
 
   e->allocated = 0;
+  e->image_size = 0;
 }
 
 void
@@ -383,7 +384,7 @@ dyld_objfile_entry_compare (struct dyld_objfile_entry *a,
   COMPARE_SCALAR (reason);
 
   COMPARE_SCALAR (allocated);
-
+  COMPARE_SCALAR (image_size);
 #undef COMPARE_SCALAR
 #undef COMPARE_STRING
 

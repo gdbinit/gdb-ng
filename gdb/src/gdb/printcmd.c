@@ -868,6 +868,9 @@ static struct type *examine_g_type;
 
 /* Examine data at address ADDR in format FMT.
    Fetch it from memory and print on gdb_stdout.  */
+/* fG (05/11/2013) structure we read the images info from */
+#include "macosx/macosx-nat-dyld.h"
+extern macosx_dyld_thread_status macosx_dyld_status;
 
 static void
 do_examine (struct format_data fmt, CORE_ADDR addr)
@@ -911,6 +914,43 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
   if (format == 's' || format == 'i' || format == 'l')
     maxelts = 1;
 
+  /* fG (05/11/2013) find to which image the address belongs to */
+  char *name = NULL;
+  uint64_t aslr_slide = 0;
+  if (format == 'i')
+  {
+    struct dyld_objfile_info *s = &macosx_dyld_status.current_info;
+    for (int i = 0; i < s->nents; i++)
+    {
+      struct dyld_objfile_entry *j = &s->entries[i];
+      CORE_ADDR floor = 0;
+      CORE_ADDR cap = 0;
+      /* this does not cover all the cases but gdb source is a f*cking mess without comments
+         and what seem to be duplicate variables - further analyse dyld_entry_info and dyld_print_entry_info
+         these are the commands involved in "info shared" command.
+         for now it seems to work good enough... */
+      if (j->dyld_valid)
+      {
+        /* this case covers the main binary */
+        floor = j->dyld_addr;
+        cap = j->dyld_addr + j->image_size;
+        aslr_slide = j->dyld_slide;
+      }
+      else
+      {
+        /* this case seems to cover everything else */
+        floor = j->loaded_addr;
+        cap = j->loaded_addr + j->image_size;
+        aslr_slide = floor - j->image_addr;
+      }
+      if (addr >= floor && addr <= cap)
+      {
+        name = j->loaded_name;
+        break;
+      }
+    }
+  }
+
   /* Print as many objects as specified in COUNT, at most maxelts per line,
      with the address of the next one at the start of each line.  */
     // the normal gdb formats
@@ -920,6 +960,12 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
         {
             QUIT;
             print_address (next_address, gdb_stdout);
+            /* fG (05/11/2013) only print if there is aslr slide */
+            if (format == 'i' && aslr_slide != 0)
+            {
+                CORE_ADDR non_aslr_addr = next_address - aslr_slide;
+                printf_filtered(" (0x%llx)", non_aslr_addr);
+            }
             printf_filtered (":");
             for (i = maxelts; i > 0 && count > 0; i--, count--)
             {
@@ -949,6 +995,11 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
                 // uncomment if you want to have the symbolic name printed in every line
                 // fG! 12/08/2009
                 //print_address_symbolic (next_address, gdb_stdout, asm_demangle, " \t\t\t");
+            }
+            /* fG (05/11/2013) print the image name which the address belongs to */
+            if (format == 'i' && name != NULL)
+            {
+              printf_filtered("   \t[%s]", name);
             }
             printf_filtered ("\n");
             gdb_flush (gdb_stdout);
