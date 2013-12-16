@@ -44,6 +44,7 @@
 #include "block.h"
 #include "disasm.h"
 #include "objc-lang.h"
+#include <libgen.h>
 
 #ifdef TUI
 #include "tui/tui.h"		/* For tui_active et.al.   */
@@ -51,6 +52,7 @@
 
 extern int asm_demangle;	/* Whether to demangle syms in asm printouts */
 extern int addressprint;	/* Whether to print hex addresses in HLL " */
+extern int print_image_full_path; /* Wheter to print the full path name in disassembly */
 
 struct format_data
   {
@@ -999,7 +1001,14 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
             /* fG (05/11/2013) print the image name which the address belongs to */
             if (format == 'i' && name != NULL)
             {
-              printf_filtered("   \t[%s]", name);
+	      if (print_image_full_path)
+	      {
+                printf_filtered("   \t[%s]", name);
+	      }
+	      else
+	      {
+		printf_filtered("   \t[%s]", basename(name));
+	      }
             }
             printf_filtered ("\n");
             gdb_flush (gdb_stdout);

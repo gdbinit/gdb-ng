@@ -100,6 +100,7 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #include "gdbarch.h"
 
 int disable_aslr_flag = 1;
+int print_image_full_path = 0;
 
 CORE_ADDR kernel_slide = INVALID_ADDRESS;
 
@@ -3946,7 +3947,12 @@ Set if GDB should disable shared library address randomization."), _("\
 Show if GDB should disable shared library address randomization."), NULL,
 			   NULL, NULL,
 			   &setlist, &showlist);
-
+  
+  add_setshow_boolean_cmd ("print-full-path", class_obscure,
+			   &print_image_full_path, _("\
+Set if GDB should print the full image path on disassembly output. Default is just image name."), _("\
+Show if GDB should print the full image path."), NULL, NULL, NULL, &setlist, &showlist);
+  
   c = add_cmd ("add-all-kexts", class_files, add_all_kexts_command, _("\
 Usage: add-all-kexts\n\
 Load the dSYMs for all of the kexts loaded in a live kernel/kernel coredump.\n\
